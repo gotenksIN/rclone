@@ -151,6 +151,7 @@ func (rwChoices) Choices() []fs.BitsChoicesInfo {
 		{Bit: uint64(rwOff), Name: "off"},
 		{Bit: uint64(rwRead), Name: "read"},
 		{Bit: uint64(rwWrite), Name: "write"},
+		{Bit: uint64(rwFailOK), Name: "failok"},
 	}
 }
 
@@ -160,6 +161,7 @@ type rwChoice = fs.Bits[rwChoices]
 const (
 	rwRead rwChoice = 1 << iota
 	rwWrite
+	rwFailOK
 	rwOff rwChoice = 0
 )
 
@@ -173,6 +175,9 @@ var rwExamples = fs.OptionExamples{{
 }, {
 	Value: rwWrite.String(),
 	Help:  "Write the value only",
+}, {
+	Value: rwFailOK.String(),
+	Help:  "If writing fails log errors only, don't fail the transfer",
 }, {
 	Value: (rwRead | rwWrite).String(),
 	Help:  "Read and Write the value.",
@@ -1747,10 +1752,9 @@ func (f *Fs) createDir(ctx context.Context, pathID, leaf string, metadata fs.Met
 	leaf = f.opt.Enc.FromStandardName(leaf)
 	pathID = actualID(pathID)
 	createInfo := &drive.File{
-		Name:        leaf,
-		Description: leaf,
-		MimeType:    driveFolderType,
-		Parents:     []string{pathID},
+		Name:     leaf,
+		MimeType: driveFolderType,
+		Parents:  []string{pathID},
 	}
 	var updateMetadata updateMetadataFn
 	if len(metadata) > 0 {
@@ -2430,7 +2434,6 @@ func (f *Fs) createFileInfo(ctx context.Context, remote string, modTime time.Tim
 	// Define the metadata for the file we are going to create.
 	createInfo := &drive.File{
 		Name:         leaf,
-		Description:  leaf,
 		Parents:      []string{directoryID},
 		ModifiedTime: modTime.Format(timeFormatOut),
 	}
@@ -2830,7 +2833,7 @@ func (f *Fs) Copy(ctx context.Context, src fs.Object, remote string) (fs.Object,
 	// FIXME remove this when google fixes the problem!
 	if isDoc {
 		// A short sleep is needed here in order to make the
-		// change effective, without it is is ignored. This is
+		// change effective, without it is ignored. This is
 		// probably some eventual consistency nastiness.
 		sleepTime := 2 * time.Second
 		fs.Debugf(f, "Sleeping for %v before setting the modtime to work around drive bug - see #4517", sleepTime)
@@ -3773,7 +3776,7 @@ file named "foo ' \.txt":
 
 The result is a JSON array of matches, for example:
 
-[
+    [
 	{
 		"createdTime": "2017-06-29T19:58:28.537Z",
 		"id": "0AxBe_CDEF4zkGHI4d0FjYko2QkD",
@@ -3789,7 +3792,7 @@ The result is a JSON array of matches, for example:
 		"size": "311",
 		"webViewLink": "https://drive.google.com/file/d/0AxBe_CDEF4zkGHI4d0FjYko2QkD/view?usp=drivesdk\u0026resourcekey=0-ABCDEFGHIXJQpIGqBJq3MC"
 	}
-]`,
+    ]`,
 }}
 
 // Command the backend to run a named command
