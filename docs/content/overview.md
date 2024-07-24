@@ -349,8 +349,8 @@ have a Windows file system with Unicode fullwidth characters
 remote rather than being translated to regular (halfwidth) `*`, `?` and `:`.
 
 The `--backend-encoding` flags allow you to change that. You can
-disable the encoding completely with `--backend-encoding None` or set
-`encoding = None` in the config file.
+disable the encoding completely with `--backend-encoding Raw` or set
+`encoding = Raw` in the config file.
 
 Encoding takes a comma separated list of encodings. You can see the
 list of all possible values by passing an invalid value to this
@@ -376,7 +376,7 @@ will show you the defaults for the backends.
 | LeftSpace | SPACE on the left of a string | `␠` |
 | LeftTilde | `~` on the left of a string | `～` |
 | LtGt | `<`, `>` | `＜`, `＞` |
-| None | No characters are encoded | |
+| None ¹ | NUL 0x00 | ␀ |
 | Percent | `%` | `％` |
 | Pipe | \| | `｜` |
 | Question | `?` | `？` |
@@ -387,6 +387,10 @@ will show you the defaults for the backends.
 | SingleQuote | `'` | `＇` |
 | Slash | `/` | `／` |
 | SquareBracket | `[`, `]` | `［`, `］` |
+
+¹ Encoding from NUL 0x00 to ␀ is always implicit except when using Raw.
+It was previously incorrectly documented as disabling encoding,
+and to maintain backward compatibility, its behavior has not been changed.
 
 ##### Encoding example: FTP
 
@@ -431,7 +435,7 @@ the default value but without `Colon,Question,Asterisk`:
 --local-encoding "Slash,LtGt,DoubleQuote,Pipe,BackSlash,Ctl,RightSpace,RightPeriod,InvalidUtf8,Dot"
 ```
 
-Alternatively, you can disable the conversion of any characters with `--local-encoding None`.
+Alternatively, you can disable the conversion of any characters with `--local-encoding Raw`.
 
 Instead of using command-line argument `--local-encoding`, you may also set it
 as [environment variable](/docs/#environment-variables) `RCLONE_LOCAL_ENCODING`,

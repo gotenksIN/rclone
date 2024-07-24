@@ -711,10 +711,11 @@ func NewFs(ctx context.Context, name, root string, m configmap.Mapper) (fs.Fs, e
 		ClientOptions: policyClientOptions,
 	}
 
-	// Here we auth by setting one of cred, sharedKeyCred or f.svc
+	// Here we auth by setting one of cred, sharedKeyCred, f.svc or anonymous
 	var (
 		cred          azcore.TokenCredential
 		sharedKeyCred *service.SharedKeyCredential
+		anonymous     = false
 	)
 	switch {
 	case opt.EnvAuth:
@@ -874,6 +875,9 @@ func NewFs(ctx context.Context, name, root string, m configmap.Mapper) (fs.Fs, e
 		if err != nil {
 			return nil, fmt.Errorf("failed to acquire MSI token: %w", err)
 		}
+	case opt.Account != "":
+		// Anonymous access
+		anonymous = true
 	default:
 		return nil, errors.New("no authentication method configured")
 	}
@@ -902,6 +906,12 @@ func NewFs(ctx context.Context, name, root string, m configmap.Mapper) (fs.Fs, e
 			f.svc, err = service.NewClient(opt.Endpoint, cred, &clientOpt)
 			if err != nil {
 				return nil, fmt.Errorf("create client failed: %w", err)
+			}
+		} else if anonymous {
+			// Anonymous public access
+			f.svc, err = service.NewClientWithNoCredential(opt.Endpoint, &clientOpt)
+			if err != nil {
+				return nil, fmt.Errorf("create public client failed: %w", err)
 			}
 		}
 	}
@@ -1088,7 +1098,7 @@ func (f *Fs) list(ctx context.Context, containerName, directory, prefix string, 
 			isDirectory := isDirectoryMarker(*file.Properties.ContentLength, file.Metadata, remote)
 			if isDirectory {
 				// Don't insert the root directory
-				if remote == directory {
+				if remote == f.opt.Enc.ToStandardPath(directory) {
 					continue
 				}
 				// process directory markers as directories

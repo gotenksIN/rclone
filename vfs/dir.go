@@ -66,7 +66,7 @@ func newDir(vfs *VFS, f fs.Fs, parent *Dir, fsDir fs.Directory) *Dir {
 		inode:   newInode(),
 		items:   make(map[string]Node),
 	}
-	d.cleanupTimer = time.AfterFunc(vfs.Opt.DirCacheTime*2, d.cacheCleanup)
+	d.cleanupTimer = time.AfterFunc(time.Duration(vfs.Opt.DirCacheTime*2), d.cacheCleanup)
 	d.setHasVirtual(false)
 	return d
 }
@@ -157,7 +157,7 @@ func (d *Dir) IsDir() bool {
 
 // Mode bits of the directory - satisfies Node interface
 func (d *Dir) Mode() (mode os.FileMode) {
-	return d.vfs.Opt.DirPerms
+	return os.FileMode(d.vfs.Opt.DirPerms)
 }
 
 // Name (base) of the directory - satisfies Node interface
@@ -357,7 +357,7 @@ func (d *Dir) _age(when time.Time) (age time.Duration, stale bool) {
 		return age, true
 	}
 	age = when.Sub(d.read)
-	stale = age > d.vfs.Opt.DirCacheTime
+	stale = age > time.Duration(d.vfs.Opt.DirCacheTime)
 	return
 }
 
@@ -371,7 +371,9 @@ func (d *Dir) renameTree(dirPath string) {
 	// Make sure the path is correct for each node
 	if d.path != dirPath {
 		fs.Debugf(d.path, "Renaming to %q", dirPath)
+		delete(d.parent.items, name(d.path))
 		d.path = dirPath
+		d.parent.items[name(d.path)] = d
 		d.entry = fs.NewDirCopy(context.TODO(), d.entry).SetRemote(dirPath)
 	}
 
@@ -404,6 +406,8 @@ func (d *Dir) rename(newParent *Dir, fsDir fs.Directory) {
 	d.entry = fsDir
 	d.path = fsDir.Remote()
 	newPath := d.path
+	delete(d.parent.items, name(oldPath))
+	d.parent.items[name(d.path)] = d
 	d.read = time.Time{}
 	d.mu.Unlock()
 
@@ -416,6 +420,15 @@ func (d *Dir) rename(newParent *Dir, fsDir fs.Directory) {
 			fs.Infof(d, "Dir.Rename failed in Cache: %v", err)
 		}
 	}
+}
+
+// convert path to name
+func name(p string) string {
+	p = path.Base(p)
+	if p == "." {
+		p = "/"
+	}
+	return p
 }
 
 // addObject adds a new object or directory to the directory
@@ -549,7 +562,7 @@ func (d *Dir) _readDir() error {
 	}
 
 	d.read = when
-	d.cleanupTimer.Reset(d.vfs.Opt.DirCacheTime * 2)
+	d.cleanupTimer.Reset(time.Duration(d.vfs.Opt.DirCacheTime * 2))
 
 	return nil
 }
@@ -732,7 +745,7 @@ func (d *Dir) _readDirFromEntries(entries fs.DirEntries, dirTree dirtree.DirTree
 					dir.read = time.Time{}
 				} else {
 					dir.read = when
-					dir.cleanupTimer.Reset(d.vfs.Opt.DirCacheTime * 2)
+					dir.cleanupTimer.Reset(time.Duration(d.vfs.Opt.DirCacheTime * 2))
 				}
 			}
 			dir.mu.Unlock()
@@ -770,7 +783,7 @@ func (d *Dir) readDirTree() error {
 	}
 	fs.Debugf(d.path, "Reading directory tree done in %s", time.Since(when))
 	d.read = when
-	d.cleanupTimer.Reset(d.vfs.Opt.DirCacheTime * 2)
+	d.cleanupTimer.Reset(time.Duration(d.vfs.Opt.DirCacheTime * 2))
 	return nil
 }
 
