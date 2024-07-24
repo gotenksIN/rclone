@@ -867,3 +867,10 @@ put them back in again.` >}}
   * Bill Fraser <bill@wfraser.dev>
   * Thearas <thearas850@gmail.com>
   * Filipe Herculano <fifo_@live.com>
+  * Russ Bubley <russ.bubley@googlemail.com>
+  * Paul Collins <paul.collins@canonical.com>
+  * Tomasz Melcer <liori@exroot.org>
+  * itsHenry <2671230065@qq.com>
+  * Ke Wang <me@ke.wang>
+  * AThePeanut4 <49614525+AThePeanut4@users.noreply.github.com>
+  * Tobias Markus <tobbi.bugs@googlemail.com>
